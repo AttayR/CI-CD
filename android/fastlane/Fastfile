@@ -31,7 +31,7 @@ platform :android do
   # end
 
   lane :playstore do
-    # AAB is already built in the previous step
+    # AAB is already built in the previous step with incremented version
     # Just upload the existing AAB file
     upload_to_play_store(
       track: 'internal',
