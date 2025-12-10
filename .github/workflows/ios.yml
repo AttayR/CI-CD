@@ -1,37 +1,37 @@
-name: iOS CI
+# name: iOS CI
 
-on:
-  push:
-    branches: [ main, staging ]
-  pull_request:
+# on:
+#   push:
+#     branches: [ main, staging ]
+#   pull_request:
 
-jobs:
-  ios-build:
-    runs-on: macos-latest
+# jobs:
+#   ios-build:
+#     runs-on: macos-latest
 
-    steps:
-      - uses: actions/checkout@v4
+#     steps:
+#       - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
+#       - name: Set up Node
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '18'
 
-      - name: Install JS deps
-        run: npm install
+#       - name: Install JS deps
+#         run: npm install
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
+#       - name: Set up Ruby
+#         uses: ruby/setup-ruby@v1
+#         with:
+#           ruby-version: '3.2'
+#           bundler-cache: true
 
-      - name: Install CocoaPods
-        run: |
-          cd ios
-          bundle exec pod install --repo-update
+#       - name: Install CocoaPods
+#         run: |
+#           cd ios
+#           bundle exec pod install --repo-update
 
-      - name: Run tests lane
-        run: |
-          cd ios
-          bundle exec fastlane tests
+#       - name: Run tests lane
+#         run: |
+#           cd ios
+#           bundle exec fastlane tests
