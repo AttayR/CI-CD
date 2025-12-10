@@ -154,9 +154,18 @@ jobs:
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > android/fastlane/playstore-credentials.json
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "⚠️ Error: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret not set"
+            exit 1
+          fi
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > android/playstore-credentials.json
           cd android
-          fastlane playstore
+          fastlane playstore || EXIT_CODE=$?
+          # Clean up credentials file
+          rm -f android/playstore-credentials.json
+          if [ -n "$EXIT_CODE" ]; then
+            exit $EXIT_CODE
+          fi
 
       - name: Send Discord notification on failure
         if: failure()

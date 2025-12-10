@@ -31,14 +31,13 @@ platform :android do
   # end
 
   lane :playstore do
-    gradle(
-      task: 'bundle',
-      build_type: 'Release'
-    )
-
+    # AAB is already built in the previous step
+    # Just upload the existing AAB file
     upload_to_play_store(
       track: 'internal',
       release_status: 'draft',
+      json_key: 'playstore-credentials.json',
+      aab: 'app/build/outputs/bundle/release/app-release.aab'
     )
   end
 
