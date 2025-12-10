@@ -41,7 +41,7 @@ const Login = ({ navigation }: LoginScreensProps) => {
       })
       .catch(err => {
         console.log(err);
-        setError('Incorrect email or password');
+        setError('Incorrect Email or password');
       });
   };
 
