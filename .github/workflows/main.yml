@@ -14,21 +14,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'    
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-           node-version: '22.9.0'
+          node-version: '20'
 
       - name: Cache Node.js modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -38,40 +38,18 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
-      # - name: Run Prettier
-      #   run: npm run format
-
-      # - name: Run ESLint
-      #   run: npm run lint:fix
-
-      # - name: Run Unit Tests
-      #   run: npm run test
-
-      # - name: Run Detox tests 
-      #   uses: reactivecircus/android-emulator-runner@v2
-      #   with:
-      #     api-level: 3
-      #     arch: x86_64
-      #     avd-name: Pixel_6a_API_34
-      #     force-avd-creation: false
-      #     emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
-      #     disable-animations: false
-      #     script: npm run detox:android:test:ci
-
-   #  - name: Build Detox and Run E2E Tests
-      #   run: |
-      #     npm run detox:genymotion_cloud
-      #     npm run detox:genymotion_cloud
-      
-      # Prefer to run localy e2e beacause it requires high computation and cost much on cloud services
-      # If you have money go with Genymotion 0.05$ per minute😁
+      - name: Verify setup
+        run: |
+          echo "✅ Setup verification complete"
+          node --version
+          npm --version
 
       - name: Send Discord notification on failure
         if: failure()
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content": "🚨 CI/CD Build Failed! Error logs: Testing / Linting / Prettier Failed!"}' \
+               -d '{"content": "🚨 CI/CD Build Failed! Setup verification failed!"}' \
                ${{ secrets.DISCORD_WEBHOOK_URL }}
 
       - name: Send Discord notification on success
@@ -79,7 +57,7 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content": "✅ Testing Passed"}' \
+               -d '{"content": "✅ Setup verification passed"}' \
                ${{ secrets.DISCORD_WEBHOOK_URL }}
      
   deploy:
@@ -88,21 +66,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-           node-version: '22.9.0'
+          node-version: '20'
 
       - name: Cache Node.js modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -112,10 +90,20 @@ jobs:
       - name: Install Node.js dependencies
         run: npm install
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Android AAB
+        run: |
+          cd android
+          ./gradlew bundleRelease
+
       - name: Install Fastlane
         run: sudo gem install fastlane -NV 
 
       - name: Deploy to Google Play Store
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > android/fastlane/playstore-credentials.json
           cd android
