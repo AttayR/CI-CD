@@ -29,6 +29,7 @@ jobs:
 
       - name: Cache Node.js modules
         uses: actions/cache@v4
+        id: cache
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -36,29 +37,39 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install Node.js dependencies
-        run: npm install
+        run: |
+          echo "Installing dependencies..."
+          npm install --legacy-peer-deps
+          echo "✅ Dependencies installed successfully"
 
       - name: Verify setup
         run: |
           echo "✅ Setup verification complete"
           node --version
           npm --version
+          echo "✅ All checks passed"
 
       - name: Send Discord notification on failure
         if: failure()
+        continue-on-error: true
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d '{"content": "🚨 CI/CD Build Failed! Setup verification failed!"}' \
-               ${{ secrets.DISCORD_WEBHOOK_URL }}
+          if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{"content": "🚨 CI/CD Build Failed! Setup verification failed!"}' \
+                 ${{ secrets.DISCORD_WEBHOOK_URL }} || true
+          fi
 
       - name: Send Discord notification on success
         if: success()
+        continue-on-error: true
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d '{"content": "✅ Setup verification passed"}' \
-               ${{ secrets.DISCORD_WEBHOOK_URL }}
+          if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{"content": "✅ Setup verification passed"}' \
+                 ${{ secrets.DISCORD_WEBHOOK_URL }} || true
+          fi
      
   deploy:
     runs-on: ubuntu-latest
@@ -111,19 +122,25 @@ jobs:
 
       - name: Send Discord notification on failure
         if: failure()
+        continue-on-error: true
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d '{"content": "🚨 Deployment Failed! Error logs:Fast Lane Service Failed"}' \
-               ${{ secrets.DISCORD_WEBHOOK_URL }}
+          if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{"content": "🚨 Deployment Failed! Error logs:Fast Lane Service Failed"}' \
+                 ${{ secrets.DISCORD_WEBHOOK_URL }} || true
+          fi
 
       - name: Send Discord notification on success
         if: success()
+        continue-on-error: true
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d '{"content": "✅ Deployed To Play Store 🎉!"}' \
-               ${{ secrets.DISCORD_WEBHOOK_URL }}
+          if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{"content": "✅ Deployed To Play Store 🎉!"}' \
+                 ${{ secrets.DISCORD_WEBHOOK_URL }} || true
+          fi
 
 
             
