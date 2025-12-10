@@ -34,7 +34,7 @@ const Login = ({ navigation }: LoginScreensProps) => {
         if (response) {
           setIsLoggedIn(true);
           Snackbar.show({
-            text: 'Login Success',
+            text: 'Login Successfully',
             duration: Snackbar.LENGTH_SHORT,
           });
         }
