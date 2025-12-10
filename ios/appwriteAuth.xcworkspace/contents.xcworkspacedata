@@ -4,7 +4,7 @@
    <FileRef
       location = "group:rn_ci_cd.xcodeproj">
    </FileRef>
-   <FileRef
-      location = "group:Pods/Pods.xcodeproj">
-   </FileRef>
+  <FileRef
+     location = "group:Pods/Pods.xcodeproj">
+  </FileRef>
 </Workspace>
