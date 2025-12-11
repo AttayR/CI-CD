@@ -1,7 +1,5 @@
 app_identifier("com.cicdhose.app")          # bundle id
 apple_id("developer@xcorebit.com")          # Apple ID email
-app_store_id("6756105632")                  # numeric App Store app id
-
 
 # For more information about the Appfile, see:
 #     https://docs.fastlane.tools/advanced/#appfile
