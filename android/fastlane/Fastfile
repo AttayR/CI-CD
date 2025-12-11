@@ -30,12 +30,25 @@ platform :android do
   #   # You can also use other beta testing services here
   # end
 
-  lane :playstore do
+  # Staging lane - for testing/QA (Internal Testing track)
+  lane :staging do
     # AAB is already built in the previous step with incremented version
-    # Just upload the existing AAB file
+    # Just upload the existing AAB file to Internal Testing track
     upload_to_play_store(
       track: 'internal',
       release_status: 'draft',
+      json_key: 'playstore-credentials.json',
+      aab: 'app/build/outputs/bundle/release/app-release.aab'
+    )
+  end
+
+  # Production lane - for main branch (Production track)
+  lane :playstore do
+    # AAB is already built in the previous step with incremented version
+    # Just upload the existing AAB file to Production track
+    upload_to_play_store(
+      track: 'production',
+      release_status: 'completed',
       json_key: 'playstore-credentials.json',
       aab: 'app/build/outputs/bundle/release/app-release.aab'
     )

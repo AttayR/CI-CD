@@ -1,12 +1,11 @@
-name: CI and CD
+name: Staging CI/CD
 
 on:
   push:
     branches:
-      - main
+      - staging
   pull_request:
     branches:
-      - main
       - staging
 
 jobs:
@@ -57,7 +56,7 @@ jobs:
           if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"content": "🚨 CI/CD Build Failed! Setup verification failed!"}' \
+                 -d '{"content": "🚨 Staging CI/CD Build Failed! Setup verification failed!"}' \
                  ${{ secrets.DISCORD_WEBHOOK_URL }} || true
           fi
 
@@ -68,7 +67,7 @@ jobs:
           if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"text": "🚨 CI/CD Build Failed! Setup verification failed!"}' \
+                 -d '{"text": "🚨 Staging CI/CD Build Failed! Setup verification failed!"}' \
                  ${{ secrets.SLACK_WEBHOOK }} || true
           fi
 
@@ -79,7 +78,7 @@ jobs:
           if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"content": "✅ Setup verification passed"}' \
+                 -d '{"content": "✅ Staging Setup verification passed"}' \
                  ${{ secrets.DISCORD_WEBHOOK_URL }} || true
           fi
 
@@ -90,11 +89,11 @@ jobs:
           if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"text": "✅ Setup verification passed"}' \
+                 -d '{"text": "✅ Staging Setup verification passed"}' \
                  ${{ secrets.SLACK_WEBHOOK }} || true
           fi
      
-  deploy:
+  deploy-android-staging:
     runs-on: ubuntu-latest
     needs: lint-and-test
 
@@ -178,7 +177,7 @@ jobs:
       - name: Install Fastlane
         run: sudo gem install fastlane -NV 
 
-      - name: Deploy to Google Play Store
+      - name: Deploy to Google Play Store (Internal Testing)
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -188,7 +187,7 @@ jobs:
           fi
           echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > android/playstore-credentials.json
           cd android
-          fastlane playstore || EXIT_CODE=$?
+          fastlane staging || EXIT_CODE=$?
           # Clean up credentials file
           rm -f android/playstore-credentials.json
           if [ -n "$EXIT_CODE" ]; then
@@ -202,7 +201,7 @@ jobs:
           if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"content": "🚨 Deployment Failed! Error logs:Fast Lane Service Failed"}' \
+                 -d '{"content": "🚨 Staging Android Deployment Failed!"}' \
                  ${{ secrets.DISCORD_WEBHOOK_URL }} || true
           fi
 
@@ -213,7 +212,7 @@ jobs:
           if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"text": "🚨 Deployment Failed! Error logs:Fast Lane Service Failed"}' \
+                 -d '{"text": "🚨 Staging Android Deployment Failed!"}' \
                  ${{ secrets.SLACK_WEBHOOK }} || true
           fi
 
@@ -224,7 +223,7 @@ jobs:
           if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"content": "✅ Deployed To Play Store 🎉!"}' \
+                 -d '{"content": "✅ Staging Android Deployed To Internal Testing Track 🎉!"}' \
                  ${{ secrets.DISCORD_WEBHOOK_URL }} || true
           fi
 
@@ -235,11 +234,11 @@ jobs:
           if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
             curl -H "Content-Type: application/json" \
                  -X POST \
-                 -d '{"text": "✅ Deployed To Play Store 🎉!"}' \
+                 -d '{"text": "✅ Staging Android Deployed To Internal Testing Track 🎉!"}' \
                  ${{ secrets.SLACK_WEBHOOK }} || true
           fi
 
-  # deploy-ios-production:
+  # deploy-ios-staging:
   #   runs-on: macos-latest
   #   needs: lint-and-test
 
@@ -277,7 +276,7 @@ jobs:
   #     - name: Install Fastlane
   #       run: sudo gem install fastlane -NV
 
-  #     - name: Build and Deploy to App Store (Production)
+  #     - name: Build and Deploy to TestFlight (Staging)
   #       env:
   #         APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
   #         APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -289,7 +288,7 @@ jobs:
   #           mkdir -p ~/.appstoreconnect/private_keys
   #           echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
   #         fi
-  #         bundle exec fastlane production || EXIT_CODE=$?
+  #         bundle exec fastlane staging || EXIT_CODE=$?
   #         if [ -n "$EXIT_CODE" ]; then
   #           exit $EXIT_CODE
   #         fi
@@ -301,7 +300,7 @@ jobs:
   #         if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
   #           curl -H "Content-Type: application/json" \
   #                -X POST \
-  #                -d '{"content": "🚨 Production iOS Deployment Failed!"}' \
+  #                -d '{"content": "🚨 Staging iOS Deployment Failed!"}' \
   #                ${{ secrets.DISCORD_WEBHOOK_URL }} || true
   #         fi
 
@@ -312,7 +311,7 @@ jobs:
   #         if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
   #           curl -H "Content-Type: application/json" \
   #                -X POST \
-  #                -d '{"text": "🚨 Production iOS Deployment Failed!"}' \
+  #                -d '{"text": "🚨 Staging iOS Deployment Failed!"}' \
   #                ${{ secrets.SLACK_WEBHOOK }} || true
   #         fi
 
@@ -323,7 +322,7 @@ jobs:
   #         if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
   #           curl -H "Content-Type: application/json" \
   #                -X POST \
-  #                -d '{"content": "✅ Production iOS Deployed To App Store 🎉!"}' \
+  #                -d '{"content": "✅ Staging iOS Deployed To TestFlight 🎉!"}' \
   #                ${{ secrets.DISCORD_WEBHOOK_URL }} || true
   #         fi
 
@@ -334,18 +333,6 @@ jobs:
   #         if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
   #           curl -H "Content-Type: application/json" \
   #                -X POST \
-  #                -d '{"text": "✅ Production iOS Deployed To App Store 🎉!"}' \
+  #                -d '{"text": "✅ Staging iOS Deployed To TestFlight 🎉!"}' \
   #                ${{ secrets.SLACK_WEBHOOK }} || true
   #         fi
-            
-  #     # - name: Email notification
-  #     #   if: failure()
-  #     #   uses: dawidd6/action-send-mail@v3
-  #     #   with:
-  #     #       server_address: smtp.gmail.com
-  #     #       server_port: 465
-  #     #       username: ${{ secrets.EMAIL_USERNAME }}
-  #     #       password: ${{ secrets.EMAIL_PASSWORD }}
-  #     #       subject: CI Pipeline Failure
-  #     #       to: ${{ secrets.EMAIL }}
-  #     #       body: The CI pipeline has failed.
