@@ -42,13 +42,13 @@ platform :android do
     )
   end
 
-  # Production lane - for main branch (Production track)
+  # Production lane - for main branch (Internal Testing track with draft)
   lane :playstore do
     # AAB is already built in the previous step with incremented version
-    # Just upload the existing AAB file to Production track
+    # Just upload the existing AAB file to Internal Testing track as draft
     upload_to_play_store(
-      track: 'production',
-      release_status: 'completed',
+      track: 'internal',
+      release_status: 'draft',
       json_key: 'playstore-credentials.json',
       aab: 'app/build/outputs/bundle/release/app-release.aab'
     )
