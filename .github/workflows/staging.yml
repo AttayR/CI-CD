@@ -248,13 +248,16 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-          bundler-cache: true
-          working-directory: ios
 
-      - name: Install CocoaPods
+      - name: Install CocoaPods and Fastlane
+        run: |
+          gem install cocoapods --no-document
+          gem install fastlane --no-document
+
+      - name: Pod Install
         run: |
           cd ios
-          bundle exec pod install --repo-update
+          pod install --repo-update
 
       - name: Build and Deploy to TestFlight (Staging)
         env:
@@ -268,7 +271,7 @@ jobs:
             mkdir -p ~/.appstoreconnect/private_keys
             echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
           fi
-          bundle exec fastlane staging || EXIT_CODE=$?
+          fastlane staging || EXIT_CODE=$?
           if [ -n "$EXIT_CODE" ]; then
             exit $EXIT_CODE
           fi
