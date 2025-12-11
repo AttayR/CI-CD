@@ -269,15 +269,14 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
-          bundler-cache: false
+          bundler-cache: true
+          working-directory: ios
 
-      - name: Install gems
+      - name: Verify Ruby setup
         run: |
-          cd ios
-          gem install bundler --no-document
-          bundle config unset deployment
-          bundle config unset frozen
-          bundle install --jobs 4 --retry 3
+          ruby --version
+          which ruby
+          which bundle
 
       - name: Install CocoaPods
         run: |
