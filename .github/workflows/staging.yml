@@ -266,10 +266,18 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@v2
         with:
-          ruby-version: '3.2'
-          bundler-cache: true
+          ruby-version: '3.1'
+          bundler-cache: false
+
+      - name: Install Bundler (latest)
+        run: gem install bundler --no-document
+
+      - name: Install Ruby dependencies
+        run: |
+          cd ios
+          bundle install
 
       - name: Install CocoaPods
         run: |
