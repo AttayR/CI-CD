@@ -266,7 +266,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v2
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.1'
           bundler-cache: false
