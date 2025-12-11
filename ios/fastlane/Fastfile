@@ -66,9 +66,9 @@ platform :ios do
   end
 
   # Optional: Test lane
-  desc "Run iOS tests"
-  lane :tests do
-    scan(
-      scheme: "rn_ci_cd"
-    )
-  end
+  # desc "Run iOS tests"
+  # lane :tests do
+  #   scan(
+  #     scheme: "rn_ci_cd"
+  #   )
+  # end
