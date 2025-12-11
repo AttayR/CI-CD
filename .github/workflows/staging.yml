@@ -241,101 +241,79 @@ jobs:
                  ${{ secrets.SLACK_WEBHOOK }} || true
           fi
 
-  # deploy-ios-staging:
-  #   runs-on: macos-latest
-  #   needs: lint-and-test
+  deploy-ios-staging:
+    runs-on: macos-latest
+    needs: lint-and-test
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-  #     - name: Cache Node.js modules
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: node_modules
-  #         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-node-
+      - name: Cache Node.js modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-  #     - name: Install Node.js dependencies
-  #       run: npm install --legacy-peer-deps
+      - name: Install Node.js dependencies
+        run: npm install --legacy-peer-deps
 
-  #     - name: Set up Ruby
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: '3.2'
-  #         bundler-cache: true
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
 
-  #     - name: Install CocoaPods
-  #       run: |
-  #         cd ios
-  #         bundle exec pod install --repo-update
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          bundle exec pod install --repo-update
 
-  #     - name: Install Fastlane
-  #       run: sudo gem install fastlane -NV
+      - name: Install Fastlane
+        run: sudo gem install fastlane -NV
 
-  #     - name: Build and Deploy to TestFlight (Staging)
-  #       env:
-  #         APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-  #         APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-  #         APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-  #       run: |
-  #         cd ios
-  #         # Set up App Store Connect API key if provided
-  #         if [ -n "$APP_STORE_CONNECT_API_KEY_CONTENT" ]; then
-  #           mkdir -p ~/.appstoreconnect/private_keys
-  #           echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
-  #         fi
-  #         bundle exec fastlane staging || EXIT_CODE=$?
-  #         if [ -n "$EXIT_CODE" ]; then
-  #           exit $EXIT_CODE
-  #         fi
+      - name: Build and Deploy to TestFlight (Staging)
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+        run: |
+          cd ios
+          # Set up App Store Connect API key if provided
+          if [ -n "$APP_STORE_CONNECT_API_KEY_CONTENT" ]; then
+            mkdir -p ~/.appstoreconnect/private_keys
+            echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+          fi
+          bundle exec fastlane staging || EXIT_CODE=$?
+          if [ -n "$EXIT_CODE" ]; then
+            exit $EXIT_CODE
+          fi
 
-  #     - name: Send Discord notification on failure
-  #       if: failure()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"content": "🚨 Staging iOS Deployment Failed!"}' \
-  #                ${{ secrets.DISCORD_WEBHOOK_URL }} || true
-  #         fi
+      - name: Send Slack notification on failure
+        if: failure()
+        continue-on-error: true
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{"text": "🚨 Staging iOS Deployment Failed!"}' \
+                 ${{ secrets.SLACK_WEBHOOK }} || true
+          fi
 
-  #     - name: Send Slack notification on failure
-  #       if: failure()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"text": "🚨 Staging iOS Deployment Failed!"}' \
-  #                ${{ secrets.SLACK_WEBHOOK }} || true
-  #         fi
-
-  #     - name: Send Discord notification on success
-  #       if: success()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"content": "✅ Staging iOS Deployed To TestFlight 🎉!"}' \
-  #                ${{ secrets.DISCORD_WEBHOOK_URL }} || true
-  #         fi
-
-  #     - name: Send Slack notification on success
-  #       if: success()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"text": "✅ Staging iOS Deployed To TestFlight 🎉!"}' \
-  #                ${{ secrets.SLACK_WEBHOOK }} || true
-  #         fi
+      - name: Send Slack notification on success
+        if: success()
+        continue-on-error: true
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{"text": "✅ Staging iOS Deployed To TestFlight 🎉!"}' \
+                 ${{ secrets.SLACK_WEBHOOK }} || true
+          fi
