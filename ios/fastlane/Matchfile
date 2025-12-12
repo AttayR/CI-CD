@@ -1,0 +1,10 @@
+# git_url("https://github.com/YOUR_USERNAME/ios-certificates.git")
+
+storage_mode("git")
+
+type("appstore") # The default type, can be: appstore, adhoc, enterprise or development
+
+app_identifier(["com.cicdhose.app"])
+
+# For CI, use MATCH_PASSWORD environment variable for encryption
+# username is not needed when using App Store Connect API Key
