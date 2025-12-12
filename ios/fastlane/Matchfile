@@ -4,6 +4,9 @@ type("appstore") # The default type, can be: appstore, adhoc, enterprise or deve
 app_identifier(["com.cicdhose.app"])
 username("developer@xcorebit.com")
 
+# Fix for OpenSSL encryption error on newer macOS
+force_legacy_encryption(true)
 
 # For CI, use MATCH_PASSWORD environment variable for encryption
 # username is not needed when using App Store Connect API Key
+

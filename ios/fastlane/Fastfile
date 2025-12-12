@@ -33,12 +33,28 @@ platform :ios do
     # Setup API key for authentication
     setup_api_key
     
-    # Sync certificates and provisioning profiles
-    match(
-      type: "appstore",
-      readonly: true,
-      app_identifier: "com.cicdhose.app"
-    )
+    # Create temporary keychain for CI
+    if ENV["CI"]
+      create_keychain(
+        name: "ci_keychain",
+        password: ENV["KEYCHAIN_PASSWORD"] || "temporary",
+        default_keychain: true,
+        unlock: true,
+        timeout: 3600,
+        lock_when_sleeps: false
+      )
+      
+      # Import certificate from base64
+      import_certificate(
+        certificate_path: "distribution.p12",
+        certificate_password: ENV["CERTIFICATE_PASSWORD"],
+        keychain_name: "ci_keychain",
+        keychain_password: ENV["KEYCHAIN_PASSWORD"] || "temporary"
+      )
+      
+      # Install provisioning profile
+      install_provisioning_profile(path: "distribution.mobileprovision")
+    end
     
     # Increment build number
     increment_build_number(
@@ -49,12 +65,7 @@ platform :ios do
     build_app(
       scheme: "appwriteAuth",
       workspace: "rn_ci_cd.xcworkspace",
-      export_method: "app-store",
-      export_options: {
-        provisioningProfiles: {
-          "com.cicdhose.app" => "match AppStore com.cicdhose.app"
-        }
-      }
+      export_method: "app-store"
     )
     
     upload_to_testflight(
@@ -70,12 +81,28 @@ platform :ios do
     # Setup API key for authentication
     setup_api_key
     
-    # Sync certificates and provisioning profiles
-    match(
-      type: "appstore",
-      readonly: true,
-      app_identifier: "com.cicdhose.app"
-    )
+    # Create temporary keychain for CI
+    if ENV["CI"]
+      create_keychain(
+        name: "ci_keychain",
+        password: ENV["KEYCHAIN_PASSWORD"] || "temporary",
+        default_keychain: true,
+        unlock: true,
+        timeout: 3600,
+        lock_when_sleeps: false
+      )
+      
+      # Import certificate from base64
+      import_certificate(
+        certificate_path: "distribution.p12",
+        certificate_password: ENV["CERTIFICATE_PASSWORD"],
+        keychain_name: "ci_keychain",
+        keychain_password: ENV["KEYCHAIN_PASSWORD"] || "temporary"
+      )
+      
+      # Install provisioning profile
+      install_provisioning_profile(path: "distribution.mobileprovision")
+    end
     
     # Increment build number
     increment_build_number(
@@ -86,12 +113,7 @@ platform :ios do
     build_app(
       scheme: "appwriteAuth",
       workspace: "rn_ci_cd.xcworkspace",
-      export_method: "app-store",
-      export_options: {
-        provisioningProfiles: {
-          "com.cicdhose.app" => "match AppStore com.cicdhose.app"
-        }
-      }
+      export_method: "app-store"
     )
     
     upload_to_app_store(
