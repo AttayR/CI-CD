@@ -265,8 +265,16 @@ jobs:
           PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
         run: |
           cd ios
-          echo "$DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > distribution.p12
-          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > distribution.mobileprovision
+          # Decode certificate (remove any whitespace/newlines first)
+          echo "$DISTRIBUTION_CERTIFICATE_BASE64" | tr -d '\n\r ' | base64 -d > distribution.p12
+          echo "✅ Certificate decoded, size: $(wc -c < distribution.p12) bytes"
+          
+          # Decode provisioning profile
+          echo "$PROVISIONING_PROFILE_BASE64" | tr -d '\n\r ' | base64 -d > distribution.mobileprovision
+          echo "✅ Profile decoded, size: $(wc -c < distribution.mobileprovision) bytes"
+          
+          # Verify profile is valid
+          security cms -D -i distribution.mobileprovision > /dev/null 2>&1 && echo "✅ Profile is valid" || echo "❌ Profile validation failed"
 
       - name: Build and Deploy to TestFlight (Staging)
         env:
