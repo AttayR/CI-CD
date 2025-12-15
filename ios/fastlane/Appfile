@@ -1,5 +1,3 @@
 app_identifier("com.cicdhose.app")          # bundle id
 apple_id("developer@xcorebit.com")          # Apple ID email
-
-# For more information about the Appfile, see:
-#     https://docs.fastlane.tools/advanced/#appfile
+team_id("94WKVV5U94")                       # find in Apple Developer portal

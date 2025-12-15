@@ -30,99 +30,49 @@ platform :ios do
   # Staging lane - for testing/QA (TestFlight)
   desc "Build and upload to TestFlight for staging/testing"
   lane :staging do
-    # Setup API key for authentication
-    setup_api_key
-    
-    # Create temporary keychain for CI
-    if ENV["CI"]
-      create_keychain(
-        name: "ci_keychain",
-        password: ENV["KEYCHAIN_PASSWORD"] || "temporary",
-        default_keychain: true,
-        unlock: true,
-        timeout: 3600,
-        lock_when_sleeps: false
-      )
-      
-      # Import certificate from base64
-      import_certificate(
-        certificate_path: "distribution.p12",
-        certificate_password: ENV["CERTIFICATE_PASSWORD"],
-        keychain_name: "ci_keychain",
-        keychain_password: ENV["KEYCHAIN_PASSWORD"] || "temporary"
-      )
-      
-      # Install provisioning profile
-      install_provisioning_profile(path: "distribution.mobileprovision")
-    end
-    
-    # Increment build number
-    increment_build_number(
-      xcodeproj: "rn_ci_cd.xcodeproj"
-    )
-    
-    # Build and upload to TestFlight
-    build_app(
-      scheme: "appwriteAuth",
-      workspace: "rn_ci_cd.xcworkspace",
-      export_method: "app-store"
-    )
-    
-    upload_to_testflight(
-      skip_waiting_for_build_processing: true,
-      distribute_external: false,
-      notify_external_testers: false
-    )
-  end
+    match(type: "appstore")
+
+  increment_build_number(
+    xcodeproj: "rn_ci_cd.xcodeproj"
+  )
+
+  build_app(
+    scheme: "appwriteAuth",
+    workspace: "rn_ci_cd.xcworkspace",
+    export_method: "app-store"
+  )
+
+  upload_to_testflight(
+    skip_waiting_for_build_processing: true,
+    distribute_external: false,
+    notify_external_testers: false
+  )
+end
+
 
   # Production lane - for main branch (App Store)
   desc "Build and upload to App Store for production"
   lane :production do
-    # Setup API key for authentication
-    setup_api_key
-    
-    # Create temporary keychain for CI
-    if ENV["CI"]
-      create_keychain(
-        name: "ci_keychain",
-        password: ENV["KEYCHAIN_PASSWORD"] || "temporary",
-        default_keychain: true,
-        unlock: true,
-        timeout: 3600,
-        lock_when_sleeps: false
-      )
-      
-      # Import certificate from base64
-      import_certificate(
-        certificate_path: "distribution.p12",
-        certificate_password: ENV["CERTIFICATE_PASSWORD"],
-        keychain_name: "ci_keychain",
-        keychain_password: ENV["KEYCHAIN_PASSWORD"] || "temporary"
-      )
-      
-      # Install provisioning profile
-      install_provisioning_profile(path: "distribution.mobileprovision")
-    end
-    
-    # Increment build number
-    increment_build_number(
-      xcodeproj: "rn_ci_cd.xcodeproj"
-    )
-    
-    # Build and upload to App Store
-    build_app(
-      scheme: "appwriteAuth",
-      workspace: "rn_ci_cd.xcworkspace",
-      export_method: "app-store"
-    )
-    
-    upload_to_app_store(
-      skip_metadata: true,
-      skip_screenshots: true,
-      submit_for_review: false,
-      automatic_release: false
-    )
-  end
+    match(type: "appstore")
+
+  increment_build_number(
+    xcodeproj: "rn_ci_cd.xcodeproj"
+  )
+
+  build_app(
+    scheme: "appwriteAuth",
+    workspace: "rn_ci_cd.xcworkspace",
+    export_method: "app-store"
+  )
+
+  upload_to_app_store(
+    skip_metadata: true,
+    skip_screenshots: true,
+    submit_for_review: false,
+    automatic_release: false
+  )
+end
+
 
   # Optional: Test lane
   desc "Run iOS tests"
