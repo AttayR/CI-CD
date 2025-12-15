@@ -244,27 +244,35 @@ jobs:
       - name: Install JS dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Setup Ruby
+      # Important: this repo has multiple Gemfile.lock files (root/ios/android).
+      # We must scope Ruby + Bundler to ios/, otherwise setup-ruby may pick up the root Gemfile.lock
+      # (which pins an ancient Bundler) and later steps end up running with the wrong Ruby/Bundler.
+      - name: Setup Ruby (ios)
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2.2
-          bundler-cache: false
+          bundler-cache: true
+          working-directory: ios
 
-      - name: Install Bundler 2.7.2
-        run: gem install bundler -v 2.7.2
-
-      - name: Install iOS Ruby dependencies
+      - name: Debug Ruby/Bundler (ios)
+        working-directory: ios
         run: |
-          cd ios
-          bundle _2.7.2_ config set path vendor/bundle
-          bundle _2.7.2_ install
+          which ruby
+          ruby -v
+          which gem
+          gem -v
+          which bundle
+          bundle -v
+
+      - name: Install CocoaPods (RubyGems)
+        run: |
+          # Install a known-good CocoaPods version (matches root Gemfile.lock) in the current Ruby.
+          ruby -S gem list -i cocoapods -v 1.15.2 || ruby -S gem install cocoapods -v 1.15.2
 
       - name: Install Pods
-        run: |
-          cd ios
-          bundle _2.7.2_ exec pod install
+        working-directory: ios
+        run: ruby -S pod install
 
       - name: Build & Upload iOS (Staging)
-        run: |
-          cd ios
-          bundle _2.7.2_ exec fastlane staging
+        working-directory: ios
+        run: ruby -S bundle exec fastlane staging
