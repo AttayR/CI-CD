@@ -220,47 +220,45 @@ jobs:
   #                ${{ secrets.SLACK_WEBHOOK }} || true
   #         fi
 
-deploy-ios-staging:
-  runs-on: macos-latest
-  needs: lint-and-test
+  deploy-ios-staging:
+    runs-on: macos-latest
+    needs: lint-and-test
 
-  env:
-    APPLE_ID: developer@xcorebit.com
-    APPLE_TEAM_ID: 94WKVV5U94
-    MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-    MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-    FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-    CI: true
+    env:
+      APPLE_ID: developer@xcorebit.com
+      APPLE_TEAM_ID: 94WKVV5U94
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+      CI: true
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: npm
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Install JS dependencies
-      run: npm install --legacy-peer-deps
+      - name: Install JS dependencies
+        run: npm install --legacy-peer-deps
 
-    - name: Setup Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 3.2.2
-        bundler-cache: false
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.2
 
-    - name: Install Bundler 2.7.2
-      run: gem install bundler -v 2.7.2
+      - name: Install Bundler
+        run: gem install bundler -v 2.7.2
 
-    - name: Install iOS dependencies
-      run: |
-        cd ios
-        bundle _2.7.2_ install
-        bundle _2.7.2_ exec pod install
+      - name: Install iOS dependencies
+        run: |
+          cd ios
+          bundle _2.7.2_ install
+          bundle _2.7.2_ exec pod install
 
-    - name: Build & Upload iOS (Staging)
-      run: |
-        cd ios
-        bundle _2.7.2_ exec fastlane staging
+      - name: Build & Upload iOS (Staging)
+        run: |
+          cd ios
+          bundle _2.7.2_ exec fastlane staging
