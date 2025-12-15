@@ -255,7 +255,7 @@ jobs:
       - name: Install iOS dependencies
         run: |
           cd ios
-          bundle _2.7.2_ install
+          bundle _2.7.2_ install --path vendor/bundle
           bundle _2.7.2_ exec pod install
 
       - name: Build & Upload iOS (Staging)
