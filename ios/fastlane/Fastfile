@@ -30,7 +30,11 @@ platform :ios do
   # Staging lane - for testing/QA (TestFlight)
   desc "Build and upload to TestFlight for staging/testing"
   lane :staging do
-    match(type: "appstore")
+    match(
+      type: "appstore",
+      readonly: true
+    )
+
 
   increment_build_number(
     xcodeproj: "rn_ci_cd.xcodeproj"
