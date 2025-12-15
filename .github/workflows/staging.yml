@@ -248,14 +248,20 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2.2
+          bundler-cache: false
 
-      - name: Install Bundler
+      - name: Install Bundler 2.7.2
         run: gem install bundler -v 2.7.2
 
-      - name: Install iOS dependencies
+      - name: Install iOS Ruby dependencies
         run: |
           cd ios
-          bundle _2.7.2_ install --path vendor/bundle
+          bundle _2.7.2_ config set path vendor/bundle
+          bundle _2.7.2_ install
+
+      - name: Install Pods
+        run: |
+          cd ios
           bundle _2.7.2_ exec pod install
 
       - name: Build & Upload iOS (Staging)
