@@ -23,7 +23,7 @@ const Login = ({ navigation }: LoginScreensProps) => {
 
   const handleLogin = () => {
     if (!email || !password) {
-      setError('All fields are requireds');
+      setError('All fields are required');
       return;
     }
 
