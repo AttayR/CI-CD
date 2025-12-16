@@ -16,7 +16,7 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="rn_ci_cd"/>
+        <data android:scheme="rn-ci-cd"/>
         <data android:scheme="exp+rn-ci-cd"/>
         <data android:scheme="com.cicdhose.app"/>
       </intent-filter>

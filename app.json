@@ -2,9 +2,13 @@
   "expo": {
     "name": "rn_ci_cd",
     "slug": "rn-ci-cd",
-    "scheme": "rn_ci_cd",
+    "scheme": [
+      "rn-ci-cd",
+      "exp+rn-ci-cd",
+      "com.cicdhose.app"
+    ],
     "version": "1.0.0",
-    "runtimeVersion": "exposdk:51.0.0",
+    "runtimeVersion": "exposdk:52.0.0",
     "ios": {
       "bundleIdentifier": "com.cicdhose.app",
       "supportsTablet": true

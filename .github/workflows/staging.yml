@@ -254,20 +254,20 @@ jobs:
             exit 1
           fi
 
-      - name: Build Android AAB (Staging)
-        run: |
-          cd android
-          ./gradlew bundleRelease \
-            -PMYAPP_RELEASE_STORE_FILE=keystore.jks \
-            -PMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEYSTORE_KEY_ALIAS }} \
-            -PMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_STORE_PASSWORD }} \
-            -PMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+      # - name: Build Android AAB (Staging)
+      #   run: |
+      #     cd android
+      #     ./gradlew bundleRelease \
+      #       -PMYAPP_RELEASE_STORE_FILE=keystore.jks \
+      #       -PMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEYSTORE_KEY_ALIAS }} \
+      #       -PMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_STORE_PASSWORD }} \
+      #       -PMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEYSTORE_KEY_PASSWORD }}
 
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-aab-staging
-          path: android/app/build/outputs/bundle/release/*.aab
+      # - name: Upload AAB artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: android-aab-staging
+      #     path: android/app/build/outputs/bundle/release/*.aab
 
       - name: Send Slack notification (Native Android build)
         if: always()
