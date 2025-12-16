@@ -4,9 +4,7 @@
     "slug": "rn-ci-cd",
     "scheme": "rn_ci_cd",
     "version": "1.0.0",
-    "runtimeVersion": {
-      "policy": "sdkVersion"
-    },
+    "runtimeVersion": "exposdk:51.0.0",
     "ios": {
       "bundleIdentifier": "com.cicdhose.app",
       "supportsTablet": true
@@ -15,6 +13,7 @@
       "package": "com.cicdhose.app"
     },
     "updates": {
+      "url": "https://u.expo.dev/e7d73675-5e43-4a00-8df8-f815e193d76d",
       "enabled": true,
       "fallbackToCacheTimeout": 0
     },
