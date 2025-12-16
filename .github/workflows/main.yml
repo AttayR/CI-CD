@@ -26,6 +26,8 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v3
         with:
+          base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           filters: |
             native:
               - 'android/**'
@@ -47,6 +49,25 @@ jobs:
               - '**/*.jsx'
               - '**/*.ts'
               - '**/*.tsx'
+
+      - name: Debug detected changes
+        run: |
+          echo "event_name=${GITHUB_EVENT_NAME}"
+          echo "ref=${GITHUB_REF}"
+          echo "sha=${GITHUB_SHA}"
+          echo "before=${{ github.event.before }}"
+          echo ""
+          echo "paths-filter outputs:"
+          echo "  native=${{ steps.filter.outputs.native }}"
+          echo "  deps=${{ steps.filter.outputs.deps }}"
+          echo "  js=${{ steps.filter.outputs.js }}"
+          echo ""
+          echo "Changed files (best-effort):"
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "${{ github.event.before }}" "${GITHUB_SHA}" || true
+          else
+            git diff --name-only HEAD~1 HEAD || true
+          fi
 
   lint-and-test:
     runs-on: ubuntu-latest
@@ -338,6 +359,20 @@ jobs:
             npx eas-cli@latest update --non-interactive --branch "$BRANCH" --platform android --message "$MESSAGE" --project-id "$EAS_PROJECT_ID"
           else
             npx eas-cli@latest update --non-interactive --branch "$BRANCH" --platform android --message "$MESSAGE"
+          fi
+
+      - name: Send Slack notification (Expo update)
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+            STATUS="${{ job.status }}"
+            BRANCH="${GITHUB_REF_NAME}"
+            SHA="${GITHUB_SHA}"
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d "{\"text\":\"📦 Expo Update (Android) on ${BRANCH}: ${STATUS} (${SHA})\"}" \
+                 ${{ secrets.SLACK_WEBHOOK }} || true
           fi
 
   # deploy-ios-production:
