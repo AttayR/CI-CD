@@ -1,4 +1,4 @@
-package com.authenticationapp
+package com.cicdhose.app
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -1,4 +1,28 @@
 {
-  "name": "rn_ci_cd",
-  "displayName": "rn_ci_cd"
+  "expo": {
+    "name": "rn_ci_cd",
+    "slug": "rn-ci-cd",
+    "scheme": "rn_ci_cd",
+    "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "ios": {
+      "bundleIdentifier": "com.cicdhose.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.cicdhose.app"
+    },
+    "updates": {
+      "enabled": true,
+      "fallbackToCacheTimeout": 0
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e7d73675-5e43-4a00-8df8-f815e193d76d"
+      }
+    },
+    "owner": "developerxcorebit"
+  }
 }

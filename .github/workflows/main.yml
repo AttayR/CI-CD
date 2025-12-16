@@ -10,12 +10,52 @@ on:
       - staging
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      native: ${{ steps.filter.outputs.native }}
+      deps: ${{ steps.filter.outputs.deps }}
+      js: ${{ steps.filter.outputs.js }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            native:
+              - 'android/**'
+              - 'ios/**'
+            deps:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'yarn.lock'
+              - 'pnpm-lock.yaml'
+              - 'app.json'
+              - 'babel.config.js'
+              - 'metro.config.js'
+              - 'tsconfig.json'
+            js:
+              - 'src/**'
+              - 'assets/**'
+              - 'index.js'
+              - '**/*.js'
+              - '**/*.jsx'
+              - '**/*.ts'
+              - '**/*.tsx'
+
   lint-and-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -94,13 +134,19 @@ jobs:
                  ${{ secrets.SLACK_WEBHOOK }} || true
           fi
      
-  deploy:
+  deploy-native-android:
     runs-on: ubuntu-latest
-    needs: lint-and-test
+    needs: [lint-and-test, changes]
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      (needs.changes.outputs.native == 'true' || needs.changes.outputs.deps == 'true')
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -240,6 +286,58 @@ jobs:
                  -X POST \
                  -d '{"text": "✅ Deployed To Play Store 🎉!"}' \
                  ${{ secrets.SLACK_WEBHOOK }} || true
+          fi
+
+  expo-update-android:
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, changes]
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.native != 'true' &&
+      needs.changes.outputs.deps != 'true' &&
+      needs.changes.outputs.js == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Node.js dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Setup Expo (EAS Update)
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish Expo update (Android)
+        env:
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+        run: |
+          set -e
+          BRANCH="${GITHUB_REF_NAME}"
+          MESSAGE="GitHub Actions update: ${GITHUB_SHA}"
+          if [ -n "$EAS_PROJECT_ID" ]; then
+            npx eas-cli@latest update --non-interactive --branch "$BRANCH" --platform android --message "$MESSAGE" --project-id "$EAS_PROJECT_ID"
+          else
+            npx eas-cli@latest update --non-interactive --branch "$BRANCH" --platform android --message "$MESSAGE"
           fi
 
   # deploy-ios-production:

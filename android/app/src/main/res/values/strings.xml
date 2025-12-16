@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">rn_ci_cd</string>
+  <string name="app_name">rn_ci_cd</string>
+  <string name="expo_runtime_version">exposdk:51.0.0</string>
 </resources>
