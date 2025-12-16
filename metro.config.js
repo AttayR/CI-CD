@@ -1,11 +1,5 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+// Expo OTA (EAS Update) requires Expo's Metro config.
+// In SDK 51, the Metro config lives in `@expo/metro-config`.
+const { getDefaultConfig } = require('@expo/metro-config');
 
-/**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('@react-native/metro-config').MetroConfig}
- */
-const config = {};
-
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = getDefaultConfig(__dirname);
