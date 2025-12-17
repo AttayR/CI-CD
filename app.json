@@ -1,4 +1,6 @@
 {
+  "name": "rn_ci_cd",
+  "displayName": "rn_ci_cd",
   "expo": {
     "name": "rn_ci_cd",
     "slug": "rn-ci-cd",
