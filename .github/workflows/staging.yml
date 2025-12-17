@@ -12,6 +12,10 @@ on:
           - auto
           - expo
           - native
+      version_code:
+        description: 'Optional: override Android versionCode for native deploy (e.g. 8). Leave empty to auto-increment.'
+        required: false
+        default: ''
 
   push:
     branches:
@@ -281,15 +285,26 @@ jobs:
           fi
 
       - name: Increment version (for Play Store upload)
+        env:
+          INPUT_VERSION_CODE: ${{ github.event.inputs.version_code || '' }}
         run: |
           cd android
           CURRENT_VERSION=$(awk '/versionCode/ {print $2}' app/build.gradle | head -1)
-          NEW_VERSION=$((CURRENT_VERSION + 1))
-          echo "📦 Current versionCode: $CURRENT_VERSION"
-          echo "📦 New versionCode: $NEW_VERSION"
+          CURRENT_VERSION_NAME=$(awk -F'"' '/versionName/ {print $2}' app/build.gradle | head -1)
+
+          if [ -n "$INPUT_VERSION_CODE" ]; then
+            # Use user-provided versionCode from workflow_dispatch
+            NEW_VERSION="$INPUT_VERSION_CODE"
+            echo "📦 Using manual versionCode from input: $NEW_VERSION"
+          else
+            # Auto-increment when no manual versionCode is provided
+            NEW_VERSION=$((CURRENT_VERSION + 1))
+            echo "📦 Auto-incrementing versionCode from $CURRENT_VERSION to $NEW_VERSION"
+          fi
+
           sed -i "s/versionCode $CURRENT_VERSION/versionCode $NEW_VERSION/" app/build.gradle
 
-          CURRENT_VERSION_NAME=$(awk -F'"' '/versionName/ {print $2}' app/build.gradle | head -1)
+          # Keep a simple PATCH bump for versionName (independent from Expo version).
           IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION_NAME"
           MAJOR=${VERSION_PARTS[0]:-1}
           MINOR=${VERSION_PARTS[1]:-0}
