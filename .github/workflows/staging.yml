@@ -13,7 +13,11 @@ on:
           - expo
           - native
       version_code:
-        description: 'Optional: override Android versionCode for native deploy (e.g. 8). Leave empty to auto-increment.'
+        description: 'VersionCode for native deploy (e.g. 8)'
+        required: false
+        default: ''
+      version_name:
+        description: 'VersionName for native deploy (e.g. 1.0.7)'
         required: false
         default: ''
 
