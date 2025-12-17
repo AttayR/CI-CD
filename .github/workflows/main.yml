@@ -353,12 +353,13 @@ jobs:
           EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
         run: |
           set -e
-          BRANCH="${GITHUB_REF_NAME}"
+          # Use 'production' channel to match AndroidManifest.xml configuration
+          CHANNEL="production"
           MESSAGE="GitHub Actions update: ${GITHUB_SHA}"
           if [ -n "$EAS_PROJECT_ID" ]; then
-            npx eas-cli@latest update --non-interactive --branch "$BRANCH" --platform android --message "$MESSAGE" --project-id "$EAS_PROJECT_ID"
+            npx eas-cli@latest update --non-interactive --channel "$CHANNEL" --platform android --message "$MESSAGE" --project-id "$EAS_PROJECT_ID"
           else
-            npx eas-cli@latest update --non-interactive --branch "$BRANCH" --platform android --message "$MESSAGE"
+            npx eas-cli@latest update --non-interactive --channel "$CHANNEL" --platform android --message "$MESSAGE"
           fi
 
       - name: Send Slack notification (Expo update)
