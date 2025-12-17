@@ -21,15 +21,6 @@ on:
         required: false
         default: ''
 
-  push:
-    branches:
-      - staging
-      - CLI-TO-EXPO
-  pull_request:
-    branches:
-      - staging
-      - CLI-TO-EXPO
-
 
 jobs:
   changes:
