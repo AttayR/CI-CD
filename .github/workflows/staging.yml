@@ -291,11 +291,13 @@ jobs:
       - name: Increment version (for Play Store upload)
         env:
           INPUT_VERSION_CODE: ${{ github.event.inputs.version_code || '' }}
+          INPUT_VERSION_NAME: ${{ github.event.inputs.version_name || '' }}
         run: |
           cd android
           CURRENT_VERSION=$(awk '/versionCode/ {print $2}' app/build.gradle | head -1)
           CURRENT_VERSION_NAME=$(awk -F'"' '/versionName/ {print $2}' app/build.gradle | head -1)
 
+          # -------- versionCode --------
           if [ -n "$INPUT_VERSION_CODE" ]; then
             # Use user-provided versionCode from workflow_dispatch
             NEW_VERSION="$INPUT_VERSION_CODE"
@@ -308,15 +310,21 @@ jobs:
 
           sed -i "s/versionCode $CURRENT_VERSION/versionCode $NEW_VERSION/" app/build.gradle
 
-          # Keep a simple PATCH bump for versionName (independent from Expo version).
-          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION_NAME"
-          MAJOR=${VERSION_PARTS[0]:-1}
-          MINOR=${VERSION_PARTS[1]:-0}
-          PATCH=${VERSION_PARTS[2]:-0}
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION_NAME="$MAJOR.$MINOR.$NEW_PATCH"
-          echo "📦 Current versionName: $CURRENT_VERSION_NAME"
-          echo "📦 New versionName: $NEW_VERSION_NAME"
+          # -------- versionName --------
+          if [ -n "$INPUT_VERSION_NAME" ]; then
+            NEW_VERSION_NAME="$INPUT_VERSION_NAME"
+            echo "📦 Using manual versionName from input: $NEW_VERSION_NAME"
+          else
+            # Fallback: simple PATCH bump
+            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION_NAME"
+            MAJOR=${VERSION_PARTS[0]:-1}
+            MINOR=${VERSION_PARTS[1]:-0}
+            PATCH=${VERSION_PARTS[2]:-0}
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION_NAME="$MAJOR.$MINOR.$NEW_PATCH"
+            echo "📦 Auto-bumping versionName patch: $CURRENT_VERSION_NAME -> $NEW_VERSION_NAME"
+          fi
+
           sed -i "s/versionName \"$CURRENT_VERSION_NAME\"/versionName \"$NEW_VERSION_NAME\"/" app/build.gradle
 
       - name: Build Android AAB (Release - Play Store)
