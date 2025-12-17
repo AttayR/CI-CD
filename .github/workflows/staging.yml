@@ -1,18 +1,10 @@
 name: Staging CI/CD
 
 on:
-  push:
-    branches:
-      - staging
-      - CLI-TO-EXPO
-  pull_request:
-    branches:
-      - staging
-      - CLI-TO-EXPO
   workflow_dispatch:
     inputs:
       deploy_type:
-        description: "Deployment type: auto (detect), expo (OTA), native (AAB + Play Internal draft)"
+        description: 'Choose deployment type'
         required: true
         default: auto
         type: choice
@@ -21,6 +13,16 @@ on:
           - expo
           - native
 
+  push:
+    branches:
+      - staging
+      - CLI-TO-EXPO
+  pull_request:
+    branches:
+      - staging
+      - CLI-TO-EXPO
+
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -28,53 +30,20 @@ jobs:
       native: ${{ steps.filter.outputs.native }}
       deps: ${{ steps.filter.outputs.deps }}
       js: ${{ steps.filter.outputs.js }}
-      deploy_type: ${{ steps.decide.outputs.deploy_type }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Compute diff base/ref SHAs
-        id: shas
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          EVENT="${{ github.event_name }}"
-          BASE=""
-          REF="${GITHUB_SHA}"
-
-          if [ "$EVENT" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-            REF="${{ github.event.pull_request.head.sha }}"
-          elif [ "$EVENT" = "push" ]; then
-            BASE="${{ github.event.before }}"
-            REF="${GITHUB_SHA}"
-          elif [ "$EVENT" = "workflow_dispatch" ]; then
-            # Manual runs don't have `before`, so compare against previous commit.
-            BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"
-            REF="${GITHUB_SHA}"
-          else
-            BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"
-            REF="${GITHUB_SHA}"
-          fi
-
-          # Handle first commit / missing base.
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            BASE="$REF"
-          fi
-
-          echo "base_sha=$BASE" >> "$GITHUB_OUTPUT"
-          echo "ref_sha=$REF" >> "$GITHUB_OUTPUT"
-
       - name: Detect changed paths
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          # Make the comparison explicit so each event type is consistent.
-          base: ${{ steps.shas.outputs.base_sha }}
-          ref: ${{ steps.shas.outputs.ref_sha }}
+          # Make the comparison explicit so pushes only consider what changed
+          # between the previous commit and this commit.
+          base: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || (github.event_name == 'push' && github.event.before) || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           filters: |
             native:
               - 'android/**'
@@ -97,47 +66,12 @@ jobs:
               - '**/*.ts'
               - '**/*.tsx'
 
-      - name: Decide deploy type (auto/expo/native)
-        id: decide
-        run: |
-          set -e
-          EVENT="${{ github.event_name }}"
-          REQUESTED="${{ github.event.inputs.deploy_type || 'auto' }}"
-          NATIVE="${{ steps.filter.outputs.native }}"
-          DEPS="${{ steps.filter.outputs.deps }}"
-          JS="${{ steps.filter.outputs.js }}"
-
-          DEPLOY_TYPE="none"
-          if [ "$REQUESTED" = "expo" ]; then
-            DEPLOY_TYPE="expo"
-          elif [ "$REQUESTED" = "native" ]; then
-            DEPLOY_TYPE="native"
-          else
-            # auto
-            # Best practice: keep "auto" for push-based automation only.
-            # If user manually runs the workflow with auto, do nothing.
-            if [ "$EVENT" != "workflow_dispatch" ]; then
-              if [ "$NATIVE" = "true" ] || [ "$DEPS" = "true" ]; then
-                DEPLOY_TYPE="native"
-              elif [ "$JS" = "true" ]; then
-                DEPLOY_TYPE="expo"
-              fi
-            fi
-          fi
-
-          echo "requested=$REQUESTED"
-          echo "resolved_deploy_type=$DEPLOY_TYPE"
-          echo "deploy_type=$DEPLOY_TYPE" >> "$GITHUB_OUTPUT"
-
       - name: Debug detected changes
         run: |
           echo "event_name=${GITHUB_EVENT_NAME}"
           echo "ref=${GITHUB_REF}"
           echo "sha=${GITHUB_SHA}"
           echo "before=${{ github.event.before }}"
-          echo ""
-          echo "requested deploy_type=${{ github.event.inputs.deploy_type || 'auto' }}"
-          echo "resolved deploy_type=${{ steps.decide.outputs.deploy_type }}"
           echo ""
           echo "paths-filter outputs:"
           echo "  native=${{ steps.filter.outputs.native }}"
@@ -220,9 +154,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-and-test, changes]
     if: >
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/CLI-TO-EXPO') &&
-      needs.changes.outputs.deploy_type == 'expo'
+      (
+        github.event_name == 'workflow_dispatch' &&
+        github.event.inputs.deploy_type == 'expo'
+      ) ||
+      (
+        github.event_name == 'push' &&
+        (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/CLI-TO-EXPO') &&
+        needs.changes.outputs.native != 'true' &&
+        needs.changes.outputs.deps != 'true' &&
+        needs.changes.outputs.js == 'true'
+      )
+
 
     steps:
       - name: Checkout code
@@ -284,9 +227,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-and-test, changes]
     if: >
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/CLI-TO-EXPO') &&
-      needs.changes.outputs.deploy_type == 'native'
+      (
+        github.event_name == 'workflow_dispatch' &&
+        github.event.inputs.deploy_type == 'native'
+      ) ||
+      (
+        github.event_name == 'push' &&
+        (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/CLI-TO-EXPO') &&
+        (needs.changes.outputs.native == 'true' || needs.changes.outputs.deps == 'true')
+      )
 
     steps:
       - name: Checkout code
