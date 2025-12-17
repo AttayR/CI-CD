@@ -18,7 +18,7 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="rn-ci-cd"/>
         <data android:scheme="exp+rn-ci-cd"/>
-        <data android:scheme="com.cicdhose.app"/>
+        <data android:scheme="com.authenticationapp"/>
       </intent-filter>
     </activity>
   </application>

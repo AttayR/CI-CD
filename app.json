@@ -5,16 +5,16 @@
     "scheme": [
       "rn-ci-cd",
       "exp+rn-ci-cd",
-      "com.cicdhose.app"
+      "com.authenticationapp"
     ],
     "version": "1.0.0",
     "runtimeVersion": "exposdk:52.0.0",
     "ios": {
-      "bundleIdentifier": "com.cicdhose.app",
+      "bundleIdentifier": "com.authenticationapp",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.cicdhose.app"
+      "package": "com.authenticationapp"
     },
     "updates": {
       "url": "https://u.expo.dev/e7d73675-5e43-4a00-8df8-f815e193d76d",

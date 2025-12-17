@@ -1,4 +1,4 @@
-package com.cicdhose.app
+package com.authenticationapp
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

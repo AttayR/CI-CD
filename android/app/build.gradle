@@ -78,13 +78,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.cicdhose.app'
+    namespace 'com.authenticationapp'
     defaultConfig {
-        applicationId 'com.cicdhose.app'
+        applicationId 'com.authenticationapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 7
+        versionName "1.0.7"
     }
     signingConfigs {
         debug {
