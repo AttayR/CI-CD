@@ -6,7 +6,7 @@ const App = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.heading}>CI / CD</Text>
 
-      <Text style={styles.name}>Attay Rasool Moeen</Text>
+      <Text style={styles.name}>Attay Rasool (OTA)</Text>
 
       <Text style={styles.paragraph}>
         This screen represents a simple overview of CI/CD (Continuous Integration
