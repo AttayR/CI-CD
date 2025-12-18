@@ -201,7 +201,7 @@ jobs:
         run: |
           set -e
           # Use 'production' channel to match AndroidManifest.xml configuration
-          CHANNEL="production"
+          CHANNEL="staging"
           MESSAGE="GitHub Actions update: ${GITHUB_SHA}"
           if [ -n "$EAS_PROJECT_ID" ]; then
             npx eas-cli@latest update --non-interactive --channel "$CHANNEL" --platform android --message "$MESSAGE" --project-id "$EAS_PROJECT_ID"
