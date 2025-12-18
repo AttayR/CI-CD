@@ -8,8 +8,6 @@ import {
   View,
 } from 'react-native';
 import React, {useContext, useState} from 'react';
-//react native elements
-// import {FAB} from '@rneui/themed';
 //Snackbar
 import Snackbar from 'react-native-snackbar';
 

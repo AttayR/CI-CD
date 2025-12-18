@@ -26,7 +26,8 @@ react {
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
     //   Configure the full path to node for Android Studio builds
-    nodeExecutableAndArgs = ["/usr/local/bin/node"]
+    //   Commented out for EAS Build compatibility - let it use default 'node' command
+    // nodeExecutableAndArgs = ["/usr/local/bin/node"]
     //
     //   The command to run when bundling. By default is 'bundle'
     // bundleCommand = "ram-bundle"

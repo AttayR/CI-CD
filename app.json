@@ -10,7 +10,7 @@
       "com.authenticationapp"
     ],
     "version": "1.0.0",
-    "runtimeVersion": "exposdk:52.0.0",
+    "runtimeVersion": "1.0.1",
     "ios": {
       "bundleIdentifier": "com.authenticationapp",
       "supportsTablet": true
