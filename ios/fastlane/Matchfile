@@ -1,8 +1,9 @@
 git_url("https://github.com/attayrasoolxb15/cicdhose-ios-certificates")
 storage_mode("git")
 type("appstore") # The default type, can be: appstore, adhoc, enterprise or development
-app_identifier(["com.cicdhose.app"])
-username("developer@xcorebit.com")
+app_identifier(["com.cicdsm.app"])
+username("attay.rasool@xcorebit.com")
+team_id("MXJT6AL685")
 
 # Fix for OpenSSL encryption error on newer macOS
 force_legacy_encryption(true)

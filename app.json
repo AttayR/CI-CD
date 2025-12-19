@@ -7,12 +7,12 @@
     "scheme": [
       "rn-ci-cd",
       "exp+rn-ci-cd",
-      "com.authenticationapp"
+      "com.cicdsm.app"
     ],
     "version": "2",
     "runtimeVersion": "1.0.2",
     "ios": {
-      "bundleIdentifier": "com.authenticationapp",
+      "bundleIdentifier": "com.cicdsm.app",
       "supportsTablet": true
     },
     "android": {

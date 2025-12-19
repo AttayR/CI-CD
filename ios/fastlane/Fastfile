@@ -1,88 +1,109 @@
-# This file contains the fastlane.tools configuration
-# You can find the documentation at https://docs.fastlane.tools
-#
-# For a list of all available actions, check out
-#
-#     https://docs.fastlane.tools/actions
-#
-# For a list of all available plugins, check out
-#
-#     https://docs.fastlane.tools/plugins/available-plugins
-#
-
-# Uncomment the line if you want fastlane to automatically update itself
-# update_fastlane
+# Fastlane configuration for iOS CI/CD
+# Documentation: https://docs.fastlane.tools
 
 default_platform(:ios)
 
 platform :ios do
-  # Setup App Store Connect API Key
-  desc "Setup App Store Connect API Key"
-  lane :setup_api_key do
-    app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8"),
-      in_house: false
-    )
+  
+  # ==================== SHARED: API KEY SETUP ====================
+  before_all do
+    # Setup App Store Connect API Key from environment variables
+    if ENV["APP_STORE_CONNECT_API_KEY_ID"] && ENV["APP_STORE_CONNECT_ISSUER_ID"]
+      app_store_connect_api_key(
+        key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+        issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+        key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8"),
+        in_house: false
+      )
+    end
   end
 
-  # Staging lane - for testing/QA (TestFlight)
+  # ==================== STAGING: TestFlight ====================
   desc "Build and upload to TestFlight for staging/testing"
   lane :staging do
+    # Fetch certificates and profiles
     match(
       type: "appstore",
-      readonly: true
+      readonly: is_ci
     )
 
+    # Increment build number
+    increment_build_number(
+      xcodeproj: "rn_ci_cd.xcodeproj"
+    )
 
-  increment_build_number(
-    xcodeproj: "rn_ci_cd.xcodeproj"
-  )
+    # Build the app
+    build_app(
+      scheme: "appwriteAuth",
+      workspace: "rn_ci_cd.xcworkspace",
+      export_method: "app-store",
+      clean: true
+    )
 
-  build_app(
-    scheme: "appwriteAuth",
-    workspace: "rn_ci_cd.xcworkspace",
-    export_method: "app-store"
-  )
+    # Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
+    )
 
-  upload_to_testflight(
-    skip_waiting_for_build_processing: true,
-    distribute_external: false,
-    notify_external_testers: false
-  )
-end
+    UI.success("✅ Successfully uploaded to TestFlight!")
+  end
 
-
-  # Production lane - for main branch (App Store)
+  # ==================== PRODUCTION: App Store ====================
   desc "Build and upload to App Store for production"
   lane :production do
-    match(type: "appstore")
+    # Fetch certificates and profiles
+    match(
+      type: "appstore",
+      readonly: is_ci
+    )
 
-  increment_build_number(
-    xcodeproj: "rn_ci_cd.xcodeproj"
-  )
+    # Increment build number
+    increment_build_number(
+      xcodeproj: "rn_ci_cd.xcodeproj"
+    )
 
-  build_app(
-    scheme: "appwriteAuth",
-    workspace: "rn_ci_cd.xcworkspace",
-    export_method: "app-store"
-  )
+    # Build the app
+    build_app(
+      scheme: "appwriteAuth",
+      workspace: "rn_ci_cd.xcworkspace",
+      export_method: "app-store",
+      clean: true
+    )
 
-  upload_to_app_store(
-    skip_metadata: true,
-    skip_screenshots: true,
-    submit_for_review: false,
-    automatic_release: false
-  )
-end
+    # Upload to App Store
+    upload_to_app_store(
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      automatic_release: false,
+      precheck_include_in_app_purchases: false
+    )
 
+    UI.success("✅ Successfully uploaded to App Store!")
+  end
 
-  # Optional: Test lane
+  # ==================== TESTS ====================
   desc "Run iOS tests"
   lane :tests do
     scan(
-      scheme: "appwriteAuth"
+      scheme: "appwriteAuth",
+      clean: true
     )
   end
+
+  # ==================== CERTIFICATES ====================
+  desc "Sync certificates and profiles"
+  lane :sync_certificates do
+    match(
+      type: "appstore",
+      readonly: false
+    )
+    match(
+      type: "development",
+      readonly: false
+    )
+  end
+
 end

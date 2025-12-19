@@ -11,7 +11,9 @@ on:
         options:
           - auto
           - expo
-          - native
+          - native-android
+          - native-ios
+          - native-all
       version_code:
         description: 'VersionCode for native deploy (e.g. 8)'
         required: false
@@ -20,7 +22,6 @@ on:
         description: 'VersionName for native deploy (e.g. 1.0.7)'
         required: false
         default: ''
-
 
 jobs:
   changes:
@@ -39,10 +40,8 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          # Make the comparison explicit so pushes only consider what changed
-          # between the previous commit and this commit.
-          base: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || (github.event_name == 'push' && github.event.before) || github.sha }}
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          base: ${{ github.event.before || github.sha }}
+          ref: ${{ github.sha }}
           filters: |
             native:
               - 'android/**'
@@ -67,37 +66,16 @@ jobs:
 
       - name: Debug detected changes
         run: |
-          echo "event_name=${GITHUB_EVENT_NAME}"
-          echo "ref=${GITHUB_REF}"
-          echo "sha=${GITHUB_SHA}"
-          echo "before=${{ github.event.before }}"
-          echo ""
-          echo "paths-filter outputs:"
-          echo "  native=${{ steps.filter.outputs.native }}"
-          echo "  deps=${{ steps.filter.outputs.deps }}"
-          echo "  js=${{ steps.filter.outputs.js }}"
-          echo ""
-          echo "Changed files (best-effort):"
-          if [ "${{ github.event_name }}" = "push" ] && [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            git diff --name-only "${{ github.event.before }}" "${GITHUB_SHA}" || true
-          else
-            git diff --name-only HEAD~1 HEAD || true
-          fi
+          echo "Deploy type: ${{ github.event.inputs.deploy_type }}"
+          echo "Native changes: ${{ steps.filter.outputs.native }}"
+          echo "Deps changes: ${{ steps.filter.outputs.deps }}"
+          echo "JS changes: ${{ steps.filter.outputs.js }}"
 
   lint-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'    
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -106,142 +84,97 @@ jobs:
 
       - name: Cache Node.js modules
         uses: actions/cache@v4
-        id: cache
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Install Node.js dependencies
-        run: |
-          echo "Installing dependencies..."
-          npm install --legacy-peer-deps
-          echo "✅ Dependencies installed successfully"
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile || npm install --legacy-peer-deps
 
       - name: Verify setup
         run: |
-          echo "✅ Setup verification complete"
+          echo "✅ Setup complete"
           node --version
-          npm --version
-          echo "✅ All checks passed"
 
-
-      - name: Send Slack notification on failure
-        if: failure()
+      - name: Send Slack notification
+        if: always()
         continue-on-error: true
         run: |
           if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-            curl -H "Content-Type: application/json" \
-                 -X POST \
-                 -d '{"text": "🚨 Staging CI/CD Build Failed! Setup verification failed!"}' \
-                 ${{ secrets.SLACK_WEBHOOK }} || true
+            STATUS="${{ job.status == 'success' && '✅' || '🚨' }}"
+            curl -H "Content-Type: application/json" -X POST \
+              -d "{\"text\":\"${STATUS} Staging lint-and-test: ${{ job.status }}\"}" \
+              ${{ secrets.SLACK_WEBHOOK }} || true
           fi
 
-      - name: Send Slack notification on success
-        if: success()
-        continue-on-error: true
-        run: |
-          if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-            curl -H "Content-Type: application/json" \
-                 -X POST \
-                 -d '{"text": "✅ Staging Setup verification passed"}' \
-                 ${{ secrets.SLACK_WEBHOOK }} || true
-          fi
-
-  expo-update-android:
+  # ==================== EXPO OTA UPDATE ====================
+  expo-update:
     runs-on: ubuntu-latest
     needs: [lint-and-test, changes]
     if: >
+      github.event.inputs.deploy_type == 'expo' ||
       (
-        github.event_name == 'workflow_dispatch' &&
-        github.event.inputs.deploy_type == 'expo'
-      ) ||
-      (
-        github.event_name == 'push' &&
-        (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/CLI-TO-EXPO') &&
+        github.event.inputs.deploy_type == 'auto' &&
         needs.changes.outputs.native != 'true' &&
         needs.changes.outputs.deps != 'true' &&
         needs.changes.outputs.js == 'true'
       )
 
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Cache Node.js modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile || npm install --legacy-peer-deps
 
-      - name: Install Node.js dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Setup Expo (EAS Update)
+      - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Publish Expo update (Android)
+      - name: Publish Expo update
         env:
           EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
         run: |
-          set -e
-          # Use 'production' channel to match AndroidManifest.xml configuration
           CHANNEL="staging"
-          MESSAGE="GitHub Actions update: ${GITHUB_SHA}"
-          if [ -n "$EAS_PROJECT_ID" ]; then
-            npx eas-cli@latest update --non-interactive --channel "$CHANNEL" --platform android --message "$MESSAGE" --project-id "$EAS_PROJECT_ID"
-          else
-            npx eas-cli@latest update --non-interactive --channel "$CHANNEL" --platform android --message "$MESSAGE"
-          fi
+          MESSAGE="Staging OTA: ${GITHUB_SHA::7}"
+          npx eas-cli@latest update --non-interactive --channel "$CHANNEL" --message "$MESSAGE"
 
-      - name: Send Slack notification (Expo update)
+      - name: Send Slack notification
         if: always()
         continue-on-error: true
         run: |
           if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-            STATUS="${{ job.status }}"
-            BRANCH="${GITHUB_REF_NAME}"
-            SHA="${GITHUB_SHA}"
-            curl -H "Content-Type: application/json" \
-                 -X POST \
-                 -d "{\"text\":\"📦 Expo Update (Android) on ${BRANCH}: ${STATUS} (${SHA})\"}" \
-                 ${{ secrets.SLACK_WEBHOOK }} || true
+            STATUS="${{ job.status == 'success' && '✅' || '🚨' }}"
+            curl -H "Content-Type: application/json" -X POST \
+              -d "{\"text\":\"${STATUS} Staging Expo OTA Update: ${{ job.status }}\"}" \
+              ${{ secrets.SLACK_WEBHOOK }} || true
           fi
 
-  build-native-android:
+  # ==================== ANDROID NATIVE BUILD ====================
+  deploy-android:
     runs-on: ubuntu-latest
     needs: [lint-and-test, changes]
     if: >
+      github.event.inputs.deploy_type == 'native-android' ||
+      github.event.inputs.deploy_type == 'native-all' ||
       (
-        github.event_name == 'workflow_dispatch' &&
-        github.event.inputs.deploy_type == 'native'
-      ) ||
-      (
-        github.event_name == 'push' &&
-        (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/CLI-TO-EXPO') &&
+        github.event.inputs.deploy_type == 'auto' &&
         (needs.changes.outputs.native == 'true' || needs.changes.outputs.deps == 'true')
       )
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -254,72 +187,41 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Cache Node.js modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install Node.js dependencies
-        run: npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile || npm install --legacy-peer-deps
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Decode and restore keystore
+      - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > android/app/keystore.jks
-            echo "✅ Keystore restored successfully"
-          else
-            echo "⚠️ Warning: KEYSTORE_BASE64 secret not set"
-            exit 1
-          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/keystore.jks
+          echo "✅ Keystore restored"
 
-      - name: Increment version (for Play Store upload)
+      - name: Update version
         env:
-          INPUT_VERSION_CODE: ${{ github.event.inputs.version_code || '' }}
-          INPUT_VERSION_NAME: ${{ github.event.inputs.version_name || '' }}
+          INPUT_VERSION_CODE: ${{ github.event.inputs.version_code }}
+          INPUT_VERSION_NAME: ${{ github.event.inputs.version_name }}
         run: |
           cd android
-          CURRENT_VERSION=$(awk '/versionCode/ {print $2}' app/build.gradle | head -1)
-          CURRENT_VERSION_NAME=$(awk -F'"' '/versionName/ {print $2}' app/build.gradle | head -1)
-
-          # -------- versionCode --------
-          if [ -n "$INPUT_VERSION_CODE" ]; then
-            # Use user-provided versionCode from workflow_dispatch
-            NEW_VERSION="$INPUT_VERSION_CODE"
-            echo "📦 Using manual versionCode from input: $NEW_VERSION"
-          else
-            # Auto-increment when no manual versionCode is provided
-            NEW_VERSION=$((CURRENT_VERSION + 1))
-            echo "📦 Auto-incrementing versionCode from $CURRENT_VERSION to $NEW_VERSION"
-          fi
-
-          sed -i "s/versionCode $CURRENT_VERSION/versionCode $NEW_VERSION/" app/build.gradle
-
-          # -------- versionName --------
+          CURRENT_CODE=$(awk '/versionCode/ {print $2}' app/build.gradle | head -1)
+          CURRENT_NAME=$(awk -F'"' '/versionName/ {print $2}' app/build.gradle | head -1)
+          
+          NEW_CODE="${INPUT_VERSION_CODE:-$((CURRENT_CODE + 1))}"
           if [ -n "$INPUT_VERSION_NAME" ]; then
-            NEW_VERSION_NAME="$INPUT_VERSION_NAME"
-            echo "📦 Using manual versionName from input: $NEW_VERSION_NAME"
+            NEW_NAME="$INPUT_VERSION_NAME"
           else
-            # Fallback: simple PATCH bump
-            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION_NAME"
-            MAJOR=${VERSION_PARTS[0]:-1}
-            MINOR=${VERSION_PARTS[1]:-0}
-            PATCH=${VERSION_PARTS[2]:-0}
-            NEW_PATCH=$((PATCH + 1))
-            NEW_VERSION_NAME="$MAJOR.$MINOR.$NEW_PATCH"
-            echo "📦 Auto-bumping versionName patch: $CURRENT_VERSION_NAME -> $NEW_VERSION_NAME"
+            IFS='.' read -ra V <<< "$CURRENT_NAME"
+            NEW_NAME="${V[0]:-1}.${V[1]:-0}.$((${V[2]:-0} + 1))"
           fi
+          
+          sed -i "s/versionCode $CURRENT_CODE/versionCode $NEW_CODE/" app/build.gradle
+          sed -i "s/versionName \"$CURRENT_NAME\"/versionName \"$NEW_NAME\"/" app/build.gradle
+          echo "✅ Version: $NEW_CODE ($NEW_NAME)"
 
-          sed -i "s/versionName \"$CURRENT_VERSION_NAME\"/versionName \"$NEW_VERSION_NAME\"/" app/build.gradle
-
-      - name: Build Android AAB (Release - Play Store)
+      - name: Build Android AAB
         run: |
           cd android
           ./gradlew bundleRelease \
@@ -331,244 +233,92 @@ jobs:
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-aab-${{ github.ref_name }}-${{ github.sha }}
+          name: android-aab-staging-${{ github.sha }}
           path: android/app/build/outputs/bundle/release/*.aab
 
       - name: Install Fastlane
         run: sudo gem install fastlane -NV
 
-      - name: Upload to Google Play (Internal testing - draft)
+      - name: Deploy to Play Store (Internal Testing)
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          set -e
-          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
-            echo "⚠️ Error: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret not set"
-            exit 1
-          fi
           echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > android/playstore-credentials.json
-          (cd android && fastlane staging)
-          rm -f android/playstore-credentials.json
+          cd android && fastlane staging
+          rm -f playstore-credentials.json
 
-      - name: Send Slack notification (Native Android build)
+      - name: Send Slack notification
         if: always()
         continue-on-error: true
         run: |
           if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-            STATUS="${{ job.status }}"
-            BRANCH="${GITHUB_REF_NAME}"
-            SHA="${GITHUB_SHA}"
-            RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            curl -H "Content-Type: application/json" \
-                 -X POST \
-                 -d "{\"text\":\"🤖 Native Android AAB uploaded to Play Internal (draft) on ${BRANCH}: ${STATUS} (${SHA})\\n${RUN_URL}\"}" \
-                 ${{ secrets.SLACK_WEBHOOK }} || true
+            STATUS="${{ job.status == 'success' && '✅' || '🚨' }}"
+            curl -H "Content-Type: application/json" -X POST \
+              -d "{\"text\":\"${STATUS} Staging Android deployed to Internal Testing: ${{ job.status }}\"}" \
+              ${{ secrets.SLACK_WEBHOOK }} || true
           fi
-     
-  # deploy-android-staging:
-  #   runs-on: ubuntu-latest
-  #   needs: lint-and-test
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  # ==================== iOS NATIVE BUILD ====================
+  deploy-ios:
+    runs-on: macos-latest
+    needs: [lint-and-test, changes]
+    if: >
+      github.event.inputs.deploy_type == 'native-ios' ||
+      github.event.inputs.deploy_type == 'native-all' ||
+      (
+        github.event.inputs.deploy_type == 'auto' &&
+        (needs.changes.outputs.native == 'true' || needs.changes.outputs.deps == 'true')
+      )
 
-  #     - name: Set up JDK 17
-  #       uses: actions/setup-java@v4
-  #       with:
-  #         java-version: '17'
-  #         distribution: 'temurin'
+    env:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
 
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Cache Node.js modules
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: node_modules
-  #         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-node-
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-  #     - name: Install Node.js dependencies
-  #       run: npm install --legacy-peer-deps
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile || npm install --legacy-peer-deps
 
-  #     - name: Setup Android SDK
-  #       uses: android-actions/setup-android@v3
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ios
 
-  #     - name: Decode and restore keystore
-  #       env:
-  #         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-  #       run: |
-  #         if [ -n "$KEYSTORE_BASE64" ]; then
-  #           echo "$KEYSTORE_BASE64" | base64 -d > android/app/keystore.jks
-  #           echo "✅ Keystore restored successfully"
-  #         else
-  #           echo "⚠️ Warning: KEYSTORE_BASE64 secret not set"
-  #           exit 1
-  #         fi
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          bundle install
+          bundle exec pod install --repo-update
 
-  #     - name: Increment version code
-  #       run: |
-  #         cd android
-  #         # Get current version code from build.gradle using awk (more compatible)
-  #         CURRENT_VERSION=$(awk '/versionCode/ {print $2}' app/build.gradle | head -1)
-  #         NEW_VERSION=$((CURRENT_VERSION + 1))
-  #         echo "📦 Current version code in build.gradle: $CURRENT_VERSION"
-  #         echo "📦 New version code will be: $NEW_VERSION"
-  #         echo "⚠️  Note: If this version already exists in Play Store, the build will fail."
-  #         echo "⚠️  In that case, manually update versionCode in build.gradle to a higher number."
-          
-  #         # Update version code in build.gradle
-  #         sed -i "s/versionCode $CURRENT_VERSION/versionCode $NEW_VERSION/" app/build.gradle
-          
-  #         # Get current version name
-  #         CURRENT_VERSION_NAME=$(awk -F'"' '/versionName/ {print $2}' app/build.gradle | head -1)
-  #         echo "📦 Current version name: $CURRENT_VERSION_NAME"
-  #         # Extract version parts (e.g., 1.0.1 -> 1.0.2)
-  #         IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION_NAME"
-  #         MAJOR=${VERSION_PARTS[0]:-1}
-  #         MINOR=${VERSION_PARTS[1]:-0}
-  #         PATCH=${VERSION_PARTS[2]:-0}
-  #         NEW_PATCH=$((PATCH + 1))
-  #         NEW_VERSION_NAME="$MAJOR.$MINOR.$NEW_PATCH"
-  #         echo "📦 New version name: $NEW_VERSION_NAME"
-  #         # Update version name in build.gradle
-  #         sed -i "s/versionName \"$CURRENT_VERSION_NAME\"/versionName \"$NEW_VERSION_NAME\"/" app/build.gradle
-          
-  #         echo "✅ Version updated: Code=$NEW_VERSION, Name=$NEW_VERSION_NAME"
+      - name: Setup App Store Connect API Key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
 
-  #     - name: Build Android AAB
-  #       run: |
-  #         cd android
-  #         ./gradlew bundleRelease \
-  #           -PMYAPP_RELEASE_STORE_FILE=keystore.jks \
-  #           -PMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEYSTORE_KEY_ALIAS }} \
-  #           -PMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_STORE_PASSWORD }} \
-  #           -PMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+      - name: Build and Deploy to TestFlight
+        run: |
+          cd ios
+          bundle exec fastlane staging
 
-  #     - name: Install Fastlane
-  #       run: sudo gem install fastlane -NV 
-
-  #     - name: Deploy to Google Play Store (Internal Testing)
-  #       env:
-  #         GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-  #       run: |
-  #         if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
-  #           echo "⚠️ Error: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret not set"
-  #           exit 1
-  #         fi
-  #         echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > android/playstore-credentials.json
-  #         cd android
-  #         fastlane staging || EXIT_CODE=$?
-  #         # Clean up credentials file
-  #         rm -f android/playstore-credentials.json
-  #         if [ -n "$EXIT_CODE" ]; then
-  #           exit $EXIT_CODE
-  #         fi
-
-  #     - name: Send Discord notification on failure
-  #       if: failure()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"content": "🚨 Staging Android Deployment Failed!"}' \
-  #                ${{ secrets.DISCORD_WEBHOOK_URL }} || true
-  #         fi
-
-  #     - name: Send Slack notification on failure
-  #       if: failure()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"text": "🚨 Staging Android Deployment Failed!"}' \
-  #                ${{ secrets.SLACK_WEBHOOK }} || true
-  #         fi
-
-  #     - name: Send Discord notification on success
-  #       if: success()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"content": "✅ Staging Android Deployed To Internal Testing Track 🎉!"}' \
-  #                ${{ secrets.DISCORD_WEBHOOK_URL }} || true
-  #         fi
-
-  #     - name: Send Slack notification on success
-  #       if: success()
-  #       continue-on-error: true
-  #       run: |
-  #         if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
-  #           curl -H "Content-Type: application/json" \
-  #                -X POST \
-  #                -d '{"text": "✅ Staging Android Deployed To Internal Testing Track 🎉!"}' \
-  #                ${{ secrets.SLACK_WEBHOOK }} || true
-  #         fi
-
-  # deploy-ios-staging:
-  #   runs-on: macos-latest
-  #   needs: lint-and-test
-  #   if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
-
-  #   env:
-  #     APPLE_ID: developer@xcorebit.com
-  #     FASTLANE_USER: developer@xcorebit.com
-  #     FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
-  #     FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-  #     MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-  #     MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-  #     CI: true
-
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-
-  #     - name: Install JS dependencies
-  #       run: npm install --legacy-peer-deps
-
-  #     # Important: this repo has multiple Gemfile.lock files (root/ios/android).
-  #     # We must scope Ruby + Bundler to ios/, otherwise setup-ruby may pick up the root Gemfile.lock
-  #     # (which pins an ancient Bundler) and later steps end up running with the wrong Ruby/Bundler.
-  #     - name: Setup Ruby (ios)
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: 3.2.2
-  #         bundler-cache: true
-  #         working-directory: ios
-
-  #     - name: Debug Ruby/Bundler (ios)
-  #       working-directory: ios
-  #       run: |
-  #         which ruby
-  #         ruby -v
-  #         which gem
-  #         gem -v
-  #         which bundle
-  #         bundle -v
-
-  #     - name: Install CocoaPods (RubyGems)
-  #       run: |
-  #         # Install a known-good CocoaPods version (matches root Gemfile.lock) in the current Ruby.
-  #         ruby -S gem list -i cocoapods -v 1.15.2 || ruby -S gem install cocoapods -v 1.15.2
-
-  #     - name: Install Pods
-  #       working-directory: ios
-  #       run: ruby -S pod install
-
-  #     - name: Build & Upload iOS (Staging)
-  #       working-directory: ios
-  #       run: ruby -S bundle exec fastlane staging
+      - name: Send Slack notification
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+            STATUS="${{ job.status == 'success' && '✅' || '🚨' }}"
+            curl -H "Content-Type: application/json" -X POST \
+              -d "{\"text\":\"${STATUS} Staging iOS deployed to TestFlight: ${{ job.status }}\"}" \
+              ${{ secrets.SLACK_WEBHOOK }} || true
+          fi
