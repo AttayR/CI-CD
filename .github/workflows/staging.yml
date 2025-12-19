@@ -297,18 +297,16 @@ jobs:
       - name: Install dependencies
         run: yarn install || npm install
 
-      - name: Setup Ruby
+      - name: Setup Ruby and Install Dependencies
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: false
+          bundler-cache: true
+          working-directory: ios
 
-      - name: Install Ruby Dependencies & CocoaPods
-        run: |
-          cd ios
-          bundle config set --local path 'vendor/bundle'
-          bundle install --jobs 4 --retry 3
-          bundle exec pod install --repo-update
+      - name: Install CocoaPods
+        working-directory: ios
+        run: bundle exec pod install --repo-update
 
       - name: Setup App Store Connect API Key
         run: |
@@ -317,22 +315,21 @@ jobs:
 
       - name: Update iOS Version (if specified)
         if: ${{ github.event.inputs.ios_version != '' }}
+        working-directory: ios
         run: |
-          cd ios
           agvtool new-marketing-version ${{ github.event.inputs.ios_version }}
           echo "✅ iOS Version set to ${{ github.event.inputs.ios_version }}"
 
       - name: Set iOS Build Number (if specified)
         if: ${{ github.event.inputs.ios_build_number != '' }}
+        working-directory: ios
         run: |
-          cd ios
           agvtool new-version -all ${{ github.event.inputs.ios_build_number }}
           echo "✅ iOS Build Number set to ${{ github.event.inputs.ios_build_number }}"
 
       - name: Build and Deploy to TestFlight
-        run: |
-          cd ios
-          bundle exec fastlane staging
+        working-directory: ios
+        run: bundle exec fastlane staging
 
       - name: Send Slack notification
         if: always()
