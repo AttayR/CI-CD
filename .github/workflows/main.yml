@@ -15,11 +15,19 @@ on:
           - native-ios
           - native-all
       version_code:
-        description: 'VersionCode for native deploy (e.g. 8)'
+        description: 'Android VersionCode (e.g. 8)'
         required: false
         default: ''
       version_name:
-        description: 'VersionName for native deploy (e.g. 1.0.7)'
+        description: 'Android VersionName (e.g. 1.0.7)'
+        required: false
+        default: ''
+      ios_version:
+        description: 'iOS Marketing Version (e.g. 1.2.0) - leave empty for no change'
+        required: false
+        default: ''
+      ios_build_number:
+        description: 'iOS Build Number (e.g. 45) - leave empty for auto-increment'
         required: false
         default: ''
 
@@ -300,6 +308,21 @@ jobs:
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
+      - name: Update iOS Version (if specified)
+        if: ${{ github.event.inputs.ios_version != '' }}
+        run: |
+          cd ios
+          # Update marketing version
+          agvtool new-marketing-version ${{ github.event.inputs.ios_version }}
+          echo "✅ iOS Version set to ${{ github.event.inputs.ios_version }}"
+
+      - name: Set iOS Build Number (if specified)
+        if: ${{ github.event.inputs.ios_build_number != '' }}
+        run: |
+          cd ios
+          agvtool new-version -all ${{ github.event.inputs.ios_build_number }}
+          echo "✅ iOS Build Number set to ${{ github.event.inputs.ios_build_number }}"
 
       - name: Build and Deploy to App Store
         run: |
