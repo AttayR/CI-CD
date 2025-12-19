@@ -99,7 +99,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile || npm install --legacy-peer-deps
+        run: yarn install || npm install
 
       - name: Verify setup
         run: |
@@ -289,19 +289,19 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile || npm install --legacy-peer-deps
+        run: yarn install || npm install
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: ios
+          bundler-cache: false
 
-      - name: Install CocoaPods
+      - name: Install Ruby Dependencies & CocoaPods
         run: |
           cd ios
-          bundle install
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
           bundle exec pod install --repo-update
 
       - name: Setup App Store Connect API Key
