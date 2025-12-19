@@ -291,16 +291,15 @@ jobs:
       - name: Install dependencies
         run: yarn install || npm install
 
-      - name: Setup Ruby and Install Dependencies
+      - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: ios
 
-      - name: Install CocoaPods
-        working-directory: ios
-        run: bundle exec pod install --repo-update
+      - name: Install Fastlane and CocoaPods
+        run: |
+          gem install fastlane cocoapods --no-document
+          cd ios && pod install --repo-update
 
       - name: Setup App Store Connect API Key
         run: |
@@ -323,7 +322,7 @@ jobs:
 
       - name: Build and Deploy to App Store
         working-directory: ios
-        run: bundle exec fastlane production
+        run: fastlane production
 
       - name: Send Slack notification
         if: always()
