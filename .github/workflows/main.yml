@@ -320,9 +320,9 @@ jobs:
           agvtool new-version -all ${{ github.event.inputs.ios_build_number }}
           echo "✅ iOS Build Number set to ${{ github.event.inputs.ios_build_number }}"
 
-      - name: Build and Deploy to App Store
+      - name: Build and Deploy to TestFlight
         working-directory: ios
-        run: fastlane production
+        run: fastlane staging
 
       - name: Send Slack notification
         if: always()
