@@ -274,6 +274,7 @@ jobs:
       )
 
     env:
+      COCOAPODS_PARALLEL_CODE_SIGN: false
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
@@ -300,7 +301,7 @@ jobs:
       - name: Install Fastlane and CocoaPods
         run: |
           gem install fastlane cocoapods --no-document
-          cd ios && pod install --repo-update
+          cd ios && pod install
 
       - name: Setup App Store Connect API Key
         run: |
