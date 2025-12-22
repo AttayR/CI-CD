@@ -5,7 +5,7 @@ default_platform(:ios)
 
 platform :ios do
   
-  # ==================== SHARED: API KEY SETUP ====================
+  # ==================== SHARED: API KEY & KEYCHAIN SETUP ====================
   before_all do
     # Setup App Store Connect API Key from environment variables
     if ENV["APP_STORE_CONNECT_API_KEY_ID"] && ENV["APP_STORE_CONNECT_ISSUER_ID"]
@@ -16,15 +16,46 @@ platform :ios do
         in_house: false
       )
     end
+
+    # Create temporary keychain for CI to prevent freezing
+    if is_ci
+      ENV["MATCH_KEYCHAIN_NAME"] = "fastlane_keychain"
+      ENV["MATCH_KEYCHAIN_PASSWORD"] = "fastlane_password"
+      
+      create_keychain(
+        name: ENV["MATCH_KEYCHAIN_NAME"],
+        password: ENV["MATCH_KEYCHAIN_PASSWORD"],
+        default_keychain: true,
+        unlock: true,
+        timeout: 3600,
+        add_to_search_list: true
+      )
+    end
+  end
+
+  # Cleanup keychain after all lanes
+  after_all do |lane|
+    if is_ci && ENV["MATCH_KEYCHAIN_NAME"]
+      delete_keychain(name: ENV["MATCH_KEYCHAIN_NAME"]) if File.exist?(File.expand_path("~/Library/Keychains/#{ENV['MATCH_KEYCHAIN_NAME']}-db"))
+    end
+  end
+
+  # Cleanup on error too
+  error do |lane, exception|
+    if is_ci && ENV["MATCH_KEYCHAIN_NAME"]
+      delete_keychain(name: ENV["MATCH_KEYCHAIN_NAME"]) if File.exist?(File.expand_path("~/Library/Keychains/#{ENV['MATCH_KEYCHAIN_NAME']}-db"))
+    end
   end
 
   # ==================== STAGING: TestFlight ====================
   desc "Build and upload to TestFlight for staging/testing"
   lane :staging do
-    # Fetch certificates and profiles
+    # Fetch certificates and profiles with keychain support
     match(
       type: "appstore",
-      readonly: is_ci
+      readonly: is_ci,
+      keychain_name: is_ci ? ENV["MATCH_KEYCHAIN_NAME"] : nil,
+      keychain_password: is_ci ? ENV["MATCH_KEYCHAIN_PASSWORD"] : nil
     )
 
     # Disable automatic signing for CI
@@ -66,10 +97,12 @@ platform :ios do
   # ==================== PRODUCTION: App Store ====================
   desc "Build and upload to App Store for production"
   lane :production do
-    # Fetch certificates and profiles
+    # Fetch certificates and profiles with keychain support
     match(
       type: "appstore",
-      readonly: is_ci
+      readonly: is_ci,
+      keychain_name: is_ci ? ENV["MATCH_KEYCHAIN_NAME"] : nil,
+      keychain_password: is_ci ? ENV["MATCH_KEYCHAIN_PASSWORD"] : nil
     )
 
     # Disable automatic signing for CI
