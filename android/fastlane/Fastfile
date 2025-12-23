@@ -36,7 +36,7 @@ platform :android do
     # Just upload the existing AAB file to Internal Testing track
     upload_to_play_store(
       track: 'internal',
-      release_status: 'draft',
+      release_status: 'completed',
       json_key: 'playstore-credentials.json',
       aab: 'app/build/outputs/bundle/release/app-release.aab'
     )
@@ -48,7 +48,7 @@ platform :android do
     # Just upload the existing AAB file to Internal Testing track as draft
     upload_to_play_store(
       track: 'internal',
-      release_status: 'draft',
+      release_status: 'completed',
       json_key: 'playstore-credentials.json',
       aab: 'app/build/outputs/bundle/release/app-release.aab'
     )
